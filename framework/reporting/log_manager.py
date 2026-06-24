@@ -1,0 +1,122 @@
+import os
+import time
+from typing import Optional
+from framework.models.scan_result import ScanResult
+from framework.models.vulnerability import Vulnerability, VulnType
+from framework.models.exploit import Exploit
+
+
+class LogManager:
+    def __init__(self, config: dict):
+        self.directory = config.get("directory", "logs")
+        self.file_format = config.get("format", "markdown")
+        os.makedirs(self.directory, exist_ok=True)
+
+    def save_report(
+        self,
+        target: str,
+        scan_result: ScanResult,
+        vulnerabilities: list[Vulnerability],
+        exploit: Optional[Exploit] = None,
+    ):
+        ts = time.strftime("%Y-%m-%d_%H-%M-%S")
+        safe_target = target.replace(".", "_").replace("/", "_")
+        filename = f"report_{safe_target}_{ts}.md"
+        filepath = os.path.join(self.directory, filename)
+
+        content = self._build_markdown(target, scan_result, vulnerabilities, exploit)
+        with open(filepath, "w", encoding="utf-8") as f:
+            f.write(content)
+
+        return filepath
+
+    def _build_markdown(
+        self,
+        target: str,
+        scan_result: ScanResult,
+        vulnerabilities: list[Vulnerability],
+        exploit: Optional[Exploit] = None,
+    ) -> str:
+        lines = []
+        lines.append(f"# ShadowInject - Assessment Report")
+        lines.append(f"")
+        lines.append(f"**Target:** `{target}`")
+        lines.append(f"**Date:** {time.strftime('%Y-%m-%d %H:%M:%S')}")
+        lines.append(f"")
+        lines.append(f"---")
+        lines.append(f"")
+        lines.append(f"## 1. Reconnaissance Results")
+        lines.append(f"")
+        if scan_result.open_ports:
+            lines.append(f"| Port | Service |")
+            lines.append(f"|------|---------|")
+            for p in scan_result.open_ports:
+                lines.append(f"| {p.port}/{p.protocol} | {p.service or 'unknown'} |")
+        else:
+            lines.append(f"No open ports found.")
+        lines.append(f"")
+        if scan_result.endpoints:
+            lines.append(f"### HTTP Endpoints")
+            lines.append(f"")
+            lines.append(f"| Method | Path | Status | Size |")
+            lines.append(f"|--------|------|--------|------|")
+            for ep in scan_result.endpoints:
+                lines.append(f"| {ep.method} | {ep.path} | {ep.status_code or '?'} | {ep.content_length or 0}b |")
+            lines.append(f"")
+
+        lines.append(f"## 2. Vulnerability Analysis")
+        lines.append(f"")
+        if vulnerabilities:
+            for i, v in enumerate(vulnerabilities, 1):
+                confidence_pct = round(v.confidence * 100)
+                lines.append(f"### {i}. {v.vuln_type.value}")
+                lines.append(f"")
+                lines.append(f"- **Description:** {v.description}")
+                lines.append(f"- **Endpoint:** `{v.endpoint}`")
+                if v.parameter:
+                    lines.append(f"- **Parameter:** `{v.parameter}`")
+                lines.append(f"- **Method:** {v.method}")
+                lines.append(f"- **Confidence:** {confidence_pct}%")
+                if v.evidence:
+                    lines.append(f"- **Evidence:** {v.evidence}")
+                if v.remediation:
+                    lines.append(f"- **Remediation:** {v.remediation}")
+                lines.append(f"")
+        else:
+            lines.append(f"No vulnerabilities detected.")
+            lines.append(f"")
+
+        if exploit:
+            lines.append(f"## 3. Exploit Generation")
+            lines.append(f"")
+            lines.append(f"**Vulnerability:** {exploit.vulnerability.vuln_type.value}")
+            lines.append(f"**Script:** `{exploit.script_filename or 'N/A'}`")
+            lines.append(f"")
+            if exploit.result:
+                lines.append(f"### Execution Result")
+                lines.append(f"")
+                lines.append(f"- **Success:** {'Yes' if exploit.result.success else 'No'}")
+                lines.append(f"- **Execution Time:** {exploit.result.execution_time}s")
+                if exploit.result.output:
+                    lines.append(f"")
+                    lines.append(f"```")
+                    lines.append(f"{exploit.result.output}")
+                    lines.append(f"```")
+                if exploit.result.error:
+                    lines.append(f"")
+                    lines.append(f"**Error Output:**")
+                    lines.append(f"")
+                    lines.append(f"```")
+                    lines.append(f"{exploit.result.error}")
+                    lines.append(f"```")
+            lines.append(f"")
+            lines.append(f"### Generated PoC Code")
+            lines.append(f"")
+            lines.append(f"```python")
+            lines.append(f"{exploit.script_content}")
+            lines.append(f"```")
+            lines.append(f"")
+
+        lines.append(f"---")
+        lines.append(f"*Generated by ShadowInject on {time.strftime('%Y-%m-%d %H:%M:%S')}*")
+        return "\n".join(lines)

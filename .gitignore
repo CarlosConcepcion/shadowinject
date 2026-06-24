@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Environment
+.env
+.env.local
+
+# Generated exploits & logs
+exploits/*.py
+logs/*.md
+
+# Payloads reference (clone separately)
+payloads_reference/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

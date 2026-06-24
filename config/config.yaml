@@ -1,0 +1,45 @@
+target:
+  allowed_cidrs:
+    - "192.168.0.0/16"
+    - "10.0.0.0/8"
+    - "172.16.0.0/12"
+
+scan:
+  connect_timeout: 3
+  ports_common: [21, 22, 23, 25, 53, 80, 110, 111, 135, 139, 143, 443, 445, 993, 995, 1433, 1521, 2049, 3306, 3389, 5432, 5900, 5985, 5986, 6379, 8080, 8443, 9000, 27017]
+  nmap_args: "-sV -T4 --max-retries 1"
+  http_paths:
+    - "/"
+    - "/api/v1/users"
+    - "/api/v1/admin"
+    - "/api/v1/login"
+    - "/api/v1/config"
+    - "/admin"
+    - "/login"
+    - "/wp-admin"
+    - "/.env"
+    - "/robots.txt"
+    - "/sitemap.xml"
+
+llm:
+  model: "gpt-4o"
+  temperature: 0.1
+  max_tokens: 4096
+  timeout: 60
+
+sandbox:
+  enabled: true
+  docker_image: "python:3.11-slim"
+  container_timeout: 30
+  network_disabled: true
+  memory_limit: "256m"
+  cpu_limit: 1.0
+
+dashboard:
+  show_timestamps: true
+  color_scheme: "default"
+
+logging:
+  directory: "logs"
+  format: "markdown"
+  include_raw_responses: false
