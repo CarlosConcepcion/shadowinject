@@ -7,7 +7,7 @@ class LLMClient:
     def __init__(
         self,
         provider: str = "gemini",
-        model: str = "gemini-2.0-flash",
+        model: str = "gemini-2.5-flash",
         temperature: float = 0.1,
         max_tokens: int = 4096,
         timeout: int = 60,
@@ -73,11 +73,26 @@ class LLMClient:
         contents = f"{system_prompt}\n\n{user_prompt}"
         if output_json:
             contents += "\n\nRespond with valid JSON only."
-        resp = self._client.models.generate_content(
-            model=self.model,
-            contents=contents,
-        )
-        return resp.text or ""
+        try:
+            resp = self._client.models.generate_content(
+                model=self.model,
+                contents=contents,
+            )
+            return resp.text or ""
+        except Exception as e:
+            err = str(e)
+            if "limit: 0" in err or "RESOURCE_EXHAUSTED" in err:
+                raise RuntimeError(
+                    f"Gemini API quota exhausted (model: {self.model}).\n"
+                    "Fix: enable billing at https://aistudio.google.com or try a different model.\n"
+                    "Edit config.yaml → llm.model"
+                ) from e
+            if "not found" in err.lower() or "not supported" in err.lower() or "deprecated" in err.lower():
+                raise RuntimeError(
+                    f"Model '{self.model}' may be deprecated or unavailable.\n"
+                    "Try: gemini-2.5-flash, gemini-2.5-pro, or edit config.yaml"
+                ) from e
+            raise
 
     def chat_json(self, system_prompt: str, user_prompt: str) -> dict:
         raw = self.chat(system_prompt, user_prompt, output_json=True)
