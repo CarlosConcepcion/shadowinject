@@ -29,10 +29,12 @@ class PentestFramework:
             ports=scan_cfg.get("ports_common"),
         )
         self.http_client = HttpClient()
+        llm_cfg = config.get("llm", {})
         self.llm_client = LLMClient(
-            model=config.get("llm", {}).get("model", "gpt-4o"),
-            temperature=config.get("llm", {}).get("temperature", 0.1),
-            max_tokens=config.get("llm", {}).get("max_tokens", 4096),
+            provider=llm_cfg.get("provider", "gemini"),
+            model=llm_cfg.get("model", "gemini-2.0-flash"),
+            temperature=llm_cfg.get("temperature", 0.1),
+            max_tokens=llm_cfg.get("max_tokens", 4096),
         )
         sandbox_cfg = config.get("sandbox", {})
         self.docker = DockerClient(

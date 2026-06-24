@@ -86,9 +86,13 @@ def main():
     config = load_config(args.config)
     config.setdefault("agents", {})
 
-    if not os.getenv("OPENAI_API_KEY"):
-        print("[ERROR] OPENAI_API_KEY environment variable is not set.")
-        print("Create a .env file with: OPENAI_API_KEY=sk-your-key-here")
+    provider = config.get("llm", {}).get("provider", "gemini")
+    if provider == "openai" and not os.getenv("OPENAI_API_KEY"):
+        print("[ERROR] OPENAI_API_KEY not set. Add to .env file.")
+        sys.exit(1)
+    if provider == "gemini" and not os.getenv("GEMINI_API_KEY"):
+        print("[ERROR] GEMINI_API_KEY not set. Add to .env file.")
+        print("Get a free key at: https://aistudio.google.com/apikey")
         sys.exit(1)
 
     from framework.agents.orchestrator import PentestFramework

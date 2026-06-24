@@ -22,7 +22,8 @@ scan:
     - "/sitemap.xml"
 
 llm:
-  model: "gpt-4o"
+  provider: "gemini"
+  model: "gemini-2.0-flash"
   temperature: 0.1
   max_tokens: 4096
   timeout: 60
