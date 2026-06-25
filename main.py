@@ -86,13 +86,17 @@ def main():
     config = load_config(args.config)
     config.setdefault("agents", {})
 
-    provider = config.get("llm", {}).get("provider", "gemini")
-    if provider == "openai" and not os.getenv("OPENAI_API_KEY"):
-        print("[ERROR] OPENAI_API_KEY not set. Add to .env file.")
-        sys.exit(1)
-    if provider == "gemini" and not os.getenv("GEMINI_API_KEY"):
-        print("[ERROR] GEMINI_API_KEY not set. Add to .env file.")
-        print("Get a free key at: https://aistudio.google.com/apikey")
+    provider = config.get("llm", {}).get("provider", "groq")
+    key_var = {"openai": "OPENAI_API_KEY", "groq": "GROQ_API_KEY", "gemini": "GEMINI_API_KEY"}
+    var_name = key_var.get(provider)
+    if var_name and not os.getenv(var_name):
+        urls = {
+            "openai": "https://platform.openai.com/api-keys",
+            "groq": "https://console.groq.com (no credit card needed)",
+            "gemini": "https://aistudio.google.com/apikey",
+        }
+        print(f"[ERROR] {var_name} not set. Add to .env file.")
+        print(f"Get a free key at: {urls.get(provider, 'N/A')}")
         sys.exit(1)
 
     from framework.agents.orchestrator import PentestFramework

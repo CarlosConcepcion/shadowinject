@@ -31,8 +31,8 @@ class PentestFramework:
         self.http_client = HttpClient()
         llm_cfg = config.get("llm", {})
         self.llm_client = LLMClient(
-            provider=llm_cfg.get("provider", "gemini"),
-            model=llm_cfg.get("model", "gemini-2.5-flash"),
+            provider=llm_cfg.get("provider", "groq"),
+            model=llm_cfg.get("model", "llama-3.3-70b-versatile"),
             temperature=llm_cfg.get("temperature", 0.1),
             max_tokens=llm_cfg.get("max_tokens", 4096),
         )
