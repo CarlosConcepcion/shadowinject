@@ -80,8 +80,16 @@ class LLMClient:
         }
         if output_json:
             kwargs["response_format"] = {"type": "json_object"}
-        resp = self._client.chat.completions.create(**kwargs)
-        return resp.choices[0].message.content or ""
+        try:
+            resp = self._client.chat.completions.create(**kwargs)
+            return resp.choices[0].message.content or ""
+        except Exception as e:
+            if output_json and ("json_validate_failed" in str(e) or "json" in str(e).lower()):
+                kwargs.pop("response_format", None)
+                kwargs["max_tokens"] = min(self.max_tokens * 2, 8192)
+                resp = self._client.chat.completions.create(**kwargs)
+                return resp.choices[0].message.content or ""
+            raise
 
     def _chat_gemini(self, system_prompt: str, user_prompt: str, output_json: bool) -> str:
         contents = f"{system_prompt}\n\n{user_prompt}"
