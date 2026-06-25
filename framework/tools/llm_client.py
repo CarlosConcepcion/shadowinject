@@ -87,6 +87,10 @@ class LLMClient:
             if output_json and ("json_validate_failed" in str(e) or "json" in str(e).lower()):
                 kwargs.pop("response_format", None)
                 kwargs["max_tokens"] = min(self.max_tokens * 2, 8192)
+                kwargs["messages"].append({
+                    "role": "user",
+                    "content": "Return ONLY a valid JSON object with a single key 'script'. No markdown, no code fences, no explanations.",
+                })
                 resp = self._client.chat.completions.create(**kwargs)
                 return resp.choices[0].message.content or ""
             raise
