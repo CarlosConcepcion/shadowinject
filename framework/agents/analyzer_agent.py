@@ -37,7 +37,14 @@ class AnalyzerAgent:
 
     def analyze(self, scan_result: ScanResult) -> list[Vulnerability]:
         user_prompt = self._build_prompt(scan_result)
-        raw = self.llm_client.chat(ANALYSIS_SYSTEM_PROMPT, user_prompt, output_json=True)
+        try:
+            raw = self.llm_client.chat_json(ANALYSIS_SYSTEM_PROMPT, user_prompt)
+        except json.JSONDecodeError:
+            raw_text = self.llm_client.chat(ANALYSIS_SYSTEM_PROMPT, user_prompt, output_json=True)
+            try:
+                raw = json.loads(raw_text)
+            except json.JSONDecodeError:
+                return []
         return self._parse_response(raw, scan_result.target)
 
     def _get_payload_reference_block(self) -> str:
