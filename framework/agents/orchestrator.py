@@ -50,6 +50,7 @@ class PentestFramework:
         self.scan_result: ScanResult = ScanResult(target=target)
         self.vulnerabilities: list[Vulnerability] = []
         self.exploit: Exploit | None = None
+        self._selected_vuln_index: int = -1
 
     def run(self):
         self.dashboard.show_banner(self.target)
@@ -57,9 +58,9 @@ class PentestFramework:
             self._phase_safety()
             self._phase_recon()
             self._phase_analysis()
-            if self._phase_verification():
-                self._phase_exploit_generation()
-                self._phase_sandbox()
+            self._phase_verification()
+            self._phase_exploit_generation()
+            self._phase_sandbox()
             self._phase_reporting()
             self.dashboard.show_summary(
                 self.scan_result, self.vulnerabilities, self.exploit
@@ -113,22 +114,31 @@ class PentestFramework:
         self.vulnerabilities = self.analyzer.analyze(self.scan_result)
         self.dashboard.show_vulnerabilities(self.vulnerabilities)
 
-    def _phase_verification(self) -> bool:
+    def _phase_verification(self):
         self.dashboard.show_phase("HUMAN VERIFICATION", 4, 6)
         if not self.vulnerabilities:
             self.dashboard.show_warning("No vulnerabilities detected.")
-            return False
-        return self.dashboard.ask_confirmation(self.vulnerabilities)
+            self._selected_vuln_index = -1
+            return
+        self._selected_vuln_index = self.dashboard.ask_selection(
+            self.vulnerabilities, self.scan_result.open_ports
+        )
 
     def _phase_exploit_generation(self):
         self.dashboard.show_phase("EXPLOIT GENERATION", 5, 6)
-        if not self.vulnerabilities:
+        if self._selected_vuln_index == -1:
+            self.dashboard.show_warning("Skipping exploit generation.")
             return
-        primary = self.vulnerabilities[0]
-        self.dashboard.show_status(f"Generating PoC for {primary.vuln_type.value}...")
-        self.exploit = self.exploit_generator.generate(primary)
-        path = DockerClient.write_script(self.exploit)
-        self.dashboard.show_exploit_generated(path)
+        if self._selected_vuln_index == -2:
+            targets = self.vulnerabilities
+        else:
+            targets = [self.vulnerabilities[self._selected_vuln_index]]
+
+        for vuln in targets:
+            self.dashboard.show_status(f"Generating PoC for {vuln.vuln_type.value} on {vuln.endpoint}...")
+            self.exploit = self.exploit_generator.generate(vuln)
+            path = DockerClient.write_script(self.exploit)
+            self.dashboard.show_exploit_generated(path)
 
     def _phase_sandbox(self):
         self.dashboard.show_phase("SANDBOX EXECUTION", 6, 6)

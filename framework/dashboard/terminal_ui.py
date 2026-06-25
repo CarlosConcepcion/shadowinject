@@ -10,6 +10,7 @@ from rich import box
 from framework.models.scan_result import ScanResult, OpenPort, Endpoint
 from framework.models.vulnerability import Vulnerability
 from framework.models.exploit import Exploit, ExploitResult
+from framework.tools.exploitdb_lookup import searcher as exploitdb
 
 
 console = Console()
@@ -107,6 +108,62 @@ class Dashboard:
                 border_style=color,
             )
             console.print(panel)
+            console.print()
+
+    def ask_selection(self, vulns: list[Vulnerability], open_ports: list) -> int:
+        if not vulns:
+            return -1
+        console.print("[bold yellow]SELECT VULNERABILITY TO EXPLOIT[/]\n")
+        for i, v in enumerate(vulns, 1):
+            color = "red" if v.confidence > 0.7 else "yellow"
+            port_info = ""
+            ep = v.endpoint
+            for p in open_ports:
+                if str(p.port) in ep or p.service in ep.lower():
+                    port_info = f" [dim](port {p.port} - {p.service or ''} {p.version or ''})[/]"
+                    break
+            console.print(
+                f"  [{color}]{i}[/] {v.vuln_type.value} - {v.description[:80]}...{port_info}"
+            )
+
+        for v in vulns:
+            ep = v.endpoint
+            for p in open_ports:
+                if str(p.port) in ep or (p.service and p.service in ep.lower()):
+                    self._show_exploitdb(p)
+                    break
+        console.print()
+        result = Prompt.ask(
+            "[bold yellow]Choose vulnerability number (or 0 to skip, 'a' for all)[/]",
+            default="0",
+        )
+        console.print()
+        if result.lower() == "a":
+            return -2
+        try:
+            choice = int(result)
+            if 1 <= choice <= len(vulns):
+                return choice - 1
+            return -1
+        except ValueError:
+            return -1
+
+    def _show_exploitdb(self, port):
+        if not exploitdb.is_available():
+            return
+        query = port.service or ""
+        if port.version:
+            query += f" {port.version}"
+        if not query.strip():
+            return
+        matches = exploitdb.search(query, max_results=3)
+        if matches:
+            table = Table(box=box.SIMPLE)
+            table.add_column("ExploitDB Match", style="green")
+            table.add_column("Type", style="dim")
+            for m in matches:
+                table.add_row(m["title"][:70], m["type"])
+            console.print(table)
             console.print()
 
     def ask_confirmation(self, vulns: list[Vulnerability]) -> bool:
