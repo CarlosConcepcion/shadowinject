@@ -20,12 +20,13 @@ class LLMClient:
         init_map = {
             "openai": self._init_openai,
             "groq": self._init_groq,
+            "openrouter": self._init_openrouter,
             "gemini": self._init_gemini,
         }
         init_fn = init_map.get(self.provider)
         if not init_fn:
             raise ValueError(
-                f"Unsupported provider: {provider}. Options: openai, groq, gemini"
+                f"Unsupported provider: {provider}. Options: openai, groq, openrouter, gemini"
             )
         init_fn()
 
@@ -50,6 +51,24 @@ class LLMClient:
             timeout=self.timeout,
         )
 
+    def _init_openrouter(self):
+        from openai import OpenAI
+        api_key = os.getenv("OPENROUTER_API_KEY")
+        if not api_key:
+            raise ValueError(
+                "OPENROUTER_API_KEY not set in .env file.\n"
+                "Get a free key at: https://openrouter.ai/keys"
+            )
+        self._client = OpenAI(
+            api_key=api_key,
+            base_url="https://openrouter.ai/api/v1",
+            default_headers={
+                "HTTP-Referer": "https://github.com/CarlosConcepcion/shadowinject",
+                "X-Title": "ShadowInject",
+            },
+            timeout=self.timeout,
+        )
+
     def _init_gemini(self):
         from google import genai
         api_key = os.getenv("GEMINI_API_KEY")
@@ -64,6 +83,7 @@ class LLMClient:
         chat_map = {
             "openai": self._chat_openai,
             "groq": self._chat_openai,
+            "openrouter": self._chat_openai,
         }
         fn = chat_map.get(self.provider, self._chat_gemini)
         return fn(system_prompt, user_prompt, output_json)
